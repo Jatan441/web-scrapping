@@ -13,6 +13,7 @@ import action
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys 
 
+
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
 db = client['warehouse']  # Replace with your database name
@@ -22,6 +23,7 @@ company_collection = db['googlemapscompanies']  # Replace with your collection n
 firefox_options = Options()
 # firefox_options.add_argument("--headless")  # Run Firefox in headless mode
 driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
+
 
 # Wait configuration
 wait = WebDriverWait(driver, 10)
@@ -158,16 +160,15 @@ def human_search():
         print(f"Google search failed: {e}")
 
 
-def get_company_revenue(company_name):
+def get_company_industry(company_name):
     """
-    Function to search Google for the company's revenue and find the text inside the <b> tag within
-    a span that has the 'hgKElc' class.
+    Function to search Google for the company's industry information.
     """
-    search_url = f"https://www.google.com/search?q={company_name}+revenue"
+    search_url = f"https://www.google.com/search?q={company_name}+primary industry"
     driver.get(search_url)
     time.sleep(2)  # Wait for the page to load
 
-    # Parse the page content
+
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
     # Look for the span with class 'hgKElc' and then find the <b> tag inside it
@@ -175,64 +176,70 @@ def get_company_revenue(company_name):
     if span_element:
         b_tag = span_element.find('b')  # Find the <b> tag inside the span
         if b_tag:
-            return b_tag.text  # Return the text inside the <b> tag
+            return b_tag.text  
 
-    return None
 
-def update_revenue_in_db(company_name, revenue):
+    # Look for the span/div with relevant class or text that contains the industry information
+    # # Adapt this selector based on Google's structure
+    # industry_element = soup.find('span', text=lambda t: t and "industry" in t.lower()) 
+
+    # if industry_element:
+    #     industry_text = industry_element.find_next('span').text  # Get the industry text from the next span
+    #     return industry_text.strip()  # Clean up and return the industry text
+
+    # return None
+
+def update_industry_in_db(company_name, industry):
     """
-    Function to update the company revenue in MongoDB.
+    Function to update the company industry in MongoDB.
     """
-    # Check if revenue is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
+    # Check if industry is already present in the database
+    existing_company = company_collection.find_one({'name': company_name, 'firmographic.industry': {'$exists': True, '$ne': ''}})
     if existing_company:
-        print(f"Revenue already exists for {company_name}, skipping.")
+        print(f"Industry already exists for {company_name}, skipping.")
         return
 
-    # If no revenue exists, proceed to insert/update the revenue
-    if revenue:
+    # If no industry exists, proceed to insert/update the industry
+    if industry:
         company_collection.update_one(
             {'name': company_name},
-            {'$set': {'firmographic.revenue_range.revenue': revenue}},
+            {'$set': {'firmographic.industry': industry}},
             upsert=True
         )
-        print(f"Updated {company_name} with revenue: {revenue}")
+        print(f"Updated {company_name} with industry: {industry}")
     else:
-        print(f"Revenue not found for {company_name}, skipping.")
+        print(f"Industry not found for {company_name}, skipping.")
 
 def main():
     # Fetch companies from MongoDB (you can filter as needed)
-    # companies = company_collection.find()
-
     try:
-        companies = company_collection.find({'firmographic.revenue_range.revenue': {'$exists': False}})
+
+        companies = company_collection.find({'firmographic.industry': {'$exists': False}})
 
         for company in companies:
             company_name = company['name']
-            print(f"Fetching revenue for {company_name}...")
+            print(f"Fetching industry for {company_name}...")
 
-            # Check if revenue already exists, skip if it does
-            # existing_revenue = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
-            # if existing_revenue:
-            #     print(f"Revenue for {company_name} already exists, skipping.")
+            # Check if industry already exists, skip if it does
+            # existing_industry = company_collection.find_one({'name': company_name, 'firmographic.industry': {'$exists': True, '$ne': ''}})
+            # if existing_industry:
+            #     print(f"Industry for {company_name} already exists, skipping.")
             #     continue
 
-            # Get the revenue from Google
-            revenue = get_company_revenue(company_name)
+        
 
-            # Randomly call human search
+            # Get the industry from Google
+            industry = get_company_industry(company_name)
+
+                # Randomly call human search
             if action.unpredictable_choice([True, False]):
                 human_search()  # Perform the human search simulation
 
-            # Update the revenue in MongoDB
-            update_revenue_in_db(company_name, revenue)
-
+            # Update the industry in MongoDB
+            update_industry_in_db(company_name, industry)
     except Exception as e :
-        print("Skipped...")
-
-
-
-
+        # print(f"Marked document with _id: {document['_id']} as skipped")
+        print("skipped...")
 
 if __name__ == "__main__":
     main()

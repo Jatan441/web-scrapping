@@ -262,23 +262,25 @@ import random
 def main():
     # Fetch companies that don't have an employee count in firmographics
     companies_without_employee_count = list(company_collection.find({'firmographic.employee_count': {'$exists': False}}))
+  
+    try:
 
-    # Shuffle the list of companies to process them in a non-sequential order
-    random.shuffle(companies_without_employee_count)
+        for company in companies_without_employee_count:
+            company_name = company['name']
+            print(f"Fetching employee count for {company_name}...")
 
-    for company in companies_without_employee_count:
-        company_name = company['name']
-        print(f"Fetching employee count for {company_name}...")
+            # Get the employee count from Google
+            employee_count = get_company_employee_count(company_name)
 
-        # Get the employee count from Google
-        employee_count = get_company_employee_count(company_name)
+            # Randomly call human search
+            if random.choice([True, False ]):  # Use random.choice for randomness
+                human_search()  # Perform the human search simulation
 
-        # Randomly call human search
-        if random.choice([True, False]):  # Use random.choice for randomness
-            human_search()  # Perform the human search simulation
+            # Update the employee count in MongoDB
+            update_employee_count_in_db(company_name, employee_count)
 
-        # Update the employee count in MongoDB
-        update_employee_count_in_db(company_name, employee_count)
+    except Exception as e :
+        print("Error getting employee count")
 
 
 

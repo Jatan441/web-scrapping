@@ -41,7 +41,7 @@ def human_mouse_movements(x, y, dx, dy):
 # Function to mimic human-like search
 def get_human_search_text():
     google_search_strings = [
-        # General Information
+         # General Information
         "current weather",
         "latest news",
         "current time",
@@ -157,82 +157,79 @@ def human_search():
     except Exception as e:
         print(f"Google search failed: {e}")
 
+def get_company_sector(company_name):
+    
+    search_prompts = [
+    f"{company_name} sector",
+    f"What sector is {company_name} in?",
+    f"{company_name} market sector",
+    f"{company_name} sector classification",
+    f"Which sector does {company_name} operate in?",
+    f"{company_name} economic sector",
+    f"{company_name} sector focus",
+    f"{company_name} sector category"
+    ]
 
-def get_company_revenue(company_name):
+    for prompt in search_prompts :
+        try : 
+
+            search_url = f"https://www.google.com/search?q={prompt}"
+            driver.get(search_url)
+            time.sleep(2)  # Wait for the page to load
+        
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+            # Look for the span with class 'hgKElc' and then find the <b> tag inside it
+            span_element = soup.find('span', class_='hgKElc')
+            if span_element:
+                b_tag = span_element.find('b')  # Find the <b> tag inside the span
+                if b_tag:
+                    return b_tag.text  
+        except Exception as e :
+            print(f"Couldn't find for {company_name} with prompt '{prompt}'")
+
+
+def update_sector_in_db(company_name, sector):
     """
-    Function to search Google for the company's revenue and find the text inside the <b> tag within
-    a span that has the 'hgKElc' class.
+    Function to update the company sector in MongoDB.
     """
-    search_url = f"https://www.google.com/search?q={company_name}+revenue"
-    driver.get(search_url)
-    time.sleep(2)  # Wait for the page to load
-
-    # Parse the page content
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-    # Look for the span with class 'hgKElc' and then find the <b> tag inside it
-    span_element = soup.find('span', class_='hgKElc')
-    if span_element:
-        b_tag = span_element.find('b')  # Find the <b> tag inside the span
-        if b_tag:
-            return b_tag.text  # Return the text inside the <b> tag
-
-    return None
-
-def update_revenue_in_db(company_name, revenue):
-    """
-    Function to update the company revenue in MongoDB.
-    """
-    # Check if revenue is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
+    # Check if sector is already present in the database
+    existing_company = company_collection.find_one({'name': company_name, 'firmographic.sector': {'$exists': True, '$ne': ''}})
     if existing_company:
-        print(f"Revenue already exists for {company_name}, skipping.")
+        print(f"Sector already exists for {company_name}, skipping.")
         return
 
-    # If no revenue exists, proceed to insert/update the revenue
-    if revenue:
+    # If no sector exists, proceed to insert/update the sector
+    if sector:
         company_collection.update_one(
             {'name': company_name},
-            {'$set': {'firmographic.revenue_range.revenue': revenue}},
+            {'$set': {'firmographic.sector': sector}},
             upsert=True
         )
-        print(f"Updated {company_name} with revenue: {revenue}")
+        print(f"Updated {company_name} with sector: {sector}")
     else:
-        print(f"Revenue not found for {company_name}, skipping.")
+        print(f"Sector not found for {company_name}, skipping.")
 
 def main():
-    # Fetch companies from MongoDB (you can filter as needed)
-    # companies = company_collection.find()
-
+    # Fetch companies from MongoDB that don't have a sector defined
     try:
-        companies = company_collection.find({'firmographic.revenue_range.revenue': {'$exists': False}})
+        companies = company_collection.find({'firmographic.sector': {'$exists': False}})
 
         for company in companies:
             company_name = company['name']
-            print(f"Fetching revenue for {company_name}...")
+            print(f"Fetching sector for {company_name}...")
 
-            # Check if revenue already exists, skip if it does
-            # existing_revenue = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
-            # if existing_revenue:
-            #     print(f"Revenue for {company_name} already exists, skipping.")
-            #     continue
-
-            # Get the revenue from Google
-            revenue = get_company_revenue(company_name)
+            # Get the sector from Google
+            sector = get_company_sector(company_name)
 
             # Randomly call human search
             if action.unpredictable_choice([True, False]):
                 human_search()  # Perform the human search simulation
 
-            # Update the revenue in MongoDB
-            update_revenue_in_db(company_name, revenue)
-
-    except Exception as e :
-        print("Skipped...")
-
-
-
-
+            # Update the sector in MongoDB
+            update_sector_in_db(company_name, sector)
+    except Exception as e:
+        print(f"Skipped a document due to error: {e}")
 
 if __name__ == "__main__":
     main()
