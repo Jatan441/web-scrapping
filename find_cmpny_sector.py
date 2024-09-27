@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 import action
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.keys import Keys
 
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
@@ -20,7 +20,6 @@ company_collection = db['googlemapscompanies']  # Replace with your collection n
 
 # Firefox WebDriver setup
 firefox_options = Options()
-# firefox_options.add_argument("--headless")  # Run Firefox in headless mode
 driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
 
 # Wait configuration
@@ -38,10 +37,10 @@ def human_mouse_movements(x, y, dx, dy):
     pyautogui.moveTo(x, y)
     pyautogui.moveRel(dx, dy)
 
-# Function to mimic human-like search
+# List of human-like search strings
 def get_human_search_text():
     google_search_strings = [
-         # General Information
+        # General Information
         "current weather",
         "latest news",
         "current time",
@@ -138,101 +137,79 @@ def get_human_search_text():
         "self-care activities for mental health",
         "tips for effective time management"
     ]
+
     return google_search_strings
 
+# Perform a human-like search on Google
 def human_search():
     try:
-        time.sleep(5)
         driver.get('https://www.google.com/')
         search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-        human_typing(search_bar, action.unpredictable_choice(get_human_search_text()))
+        search_text = action.unpredictable_choice(get_human_search_text())
+        human_typing(search_bar, search_text)
         actions.move_to_element(search_bar).perform()
         time.sleep(random.uniform(0.05, 20))
         search_bar.send_keys(Keys.ENTER)
         time.sleep(5)
         human_mouse_movements(10, 20, 40, 12)
-        # Simulate clicking the first result
         first_result = driver.find_element(By.CSS_SELECTOR, 'h3')
         first_result.click()
     except Exception as e:
         print(f"Google search failed: {e}")
 
+# Get company sector from Google search results
 def get_company_sector(company_name):
-    
     search_prompts = [
-    f"{company_name} sector",
-    f"What sector is {company_name} in?",
-    f"{company_name} market sector",
-    f"{company_name} sector classification",
-    f"Which sector does {company_name} operate in?",
-    f"{company_name} economic sector",
-    f"{company_name} sector focus",
-    f"{company_name} sector category"
+        f"{company_name} sector", f"What sector is {company_name} in?", 
+        f"{company_name} market sector", f"{company_name} sector classification"
     ]
 
-    for prompt in search_prompts :
-        try : 
-
+    for prompt in search_prompts:
+        try:
             search_url = f"https://www.google.com/search?q={prompt}"
             driver.get(search_url)
-            time.sleep(2)  # Wait for the page to load
-        
+            time.sleep(2)
             soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-            # Look for the span with class 'hgKElc' and then find the <b> tag inside it
             span_element = soup.find('span', class_='hgKElc')
             if span_element:
-                b_tag = span_element.find('b')  # Find the <b> tag inside the span
+                b_tag = span_element.find('b')
                 if b_tag:
-                    return b_tag.text  
-        except Exception as e :
-            print(f"Couldn't find for {company_name} with prompt '{prompt}'")
+                    return b_tag.text
+        except Exception as e:
+            print(f"Couldn't find sector for {company_name} with prompt '{prompt}': {e}")
 
-
-def update_sector_in_db(company_name, sector):
-    """
-    Function to update the company sector in MongoDB.
-    """
-    # Check if sector is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.sector': {'$exists': True, '$ne': ''}})
-    if existing_company:
-        print(f"Sector already exists for {company_name}, skipping.")
-        return
-
-    # If no sector exists, proceed to insert/update the sector
+# Update sector in MongoDB
+def update_sector_in_db(company_id, sector):
     if sector:
-        company_collection.update_one(
-            {'name': company_name},
+        result = company_collection.update_one(
+            {'_id': company_id},
             {'$set': {'firmographic.sector': sector}},
             upsert=True
         )
-        print(f"Updated {company_name} with sector: {sector}")
+        if result.matched_count > 0:
+            print(f"Updated company with ID {company_id} with sector: {sector}")
+        else:
+            print(f"Failed to update company with ID {company_id}.")
     else:
-        print(f"Sector not found for {company_name}, skipping.")
+        print(f"Sector not found for company ID {company_id}, skipping.")
 
+# Main function to process companies
 def main():
-    # Fetch companies from MongoDB that don't have a sector defined
     try:
         companies = company_collection.find({'firmographic.sector': {'$exists': False}})
-
         for company in companies:
             company_name = company['name']
+            company_id = company['_id']
             print(f"Fetching sector for {company_name}...")
-
-            # Get the sector from Google
             sector = get_company_sector(company_name)
 
-            # Randomly call human search
             if action.unpredictable_choice([True, False]):
-                human_search()  # Perform the human search simulation
+                human_search()
 
-            # Update the sector in MongoDB
-            update_sector_in_db(company_name, sector)
+            update_sector_in_db(company_id, sector)
     except Exception as e:
         print(f"Skipped a document due to error: {e}")
 
 if __name__ == "__main__":
     main()
-
-    # Close the driver when done
     driver.quit()

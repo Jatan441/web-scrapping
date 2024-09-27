@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 import action
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.keys import Keys
 
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
@@ -29,14 +29,20 @@ actions = ActionChains(driver)
 
 # Function to mimic human-like typing
 def human_typing(element, text):
-    for char in text:
-        element.send_keys(char)
-        time.sleep(random.uniform(0.05, 0.2))
+    try:
+        for char in text:
+            element.send_keys(char)
+            time.sleep(random.uniform(0.05, 0.2))
+    except Exception as e:
+        print(f"Error in human_typing: {e}")
 
 # Function to mimic human-like mouse movements
 def human_mouse_movements(x, y, dx, dy):
-    pyautogui.moveTo(x, y)
-    pyautogui.moveRel(dx, dy)
+    try:
+        pyautogui.moveTo(x, y)
+        pyautogui.moveRel(dx, dy)
+    except Exception as e:
+        print(f"Error in human_mouse_movements: {e}")
 
 # Function to mimic human-like search
 def get_human_search_text():
@@ -138,6 +144,7 @@ def get_human_search_text():
         "self-care activities for mental health",
         "tips for effective time management"
     ]
+
     return google_search_strings
 
 def human_search():
@@ -157,85 +164,74 @@ def human_search():
     except Exception as e:
         print(f"Google search failed: {e}")
 
-
 def get_company_revenue(company_name):
-    """
-    Function to search Google for the company's revenue and find the text inside the <b> tag within
-    a span that has the 'hgKElc' class.
-    """
-    search_url = f"https://www.google.com/search?q={company_name}+revenue"
-    driver.get(search_url)
-    time.sleep(2)  # Wait for the page to load
+    try:
+        search_url = f"https://www.google.com/search?q={company_name}+revenue"
+        driver.get(search_url)
+        time.sleep(2)  # Wait for the page to load
 
-    # Parse the page content
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+        # Parse the page content
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    # Look for the span with class 'hgKElc' and then find the <b> tag inside it
-    span_element = soup.find('span', class_='hgKElc')
-    if span_element:
-        b_tag = span_element.find('b')  # Find the <b> tag inside the span
-        if b_tag:
-            return b_tag.text  # Return the text inside the <b> tag
-
+        # Look for the span with class 'hgKElc' and then find the <b> tag inside it
+        span_element = soup.find('span', class_='hgKElc')
+        if span_element:
+            b_tag = span_element.find('b')  # Find the <b> tag inside the span
+            if b_tag:
+                return b_tag.text  # Return the text inside the <b> tag
+    except Exception as e:
+        print(f"Error fetching revenue for {company_name}: {e}")
     return None
 
-def update_revenue_in_db(company_name, revenue):
-    """
-    Function to update the company revenue in MongoDB.
-    """
-    # Check if revenue is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
-    if existing_company:
-        print(f"Revenue already exists for {company_name}, skipping.")
-        return
+def update_revenue_in_db(company_id, revenue):
+    try:
+        if revenue:
+            result = company_collection.update_one(
+                {'_id': company_id},
+                {'$set': {'firmographic.revenue_range.revenue': revenue}},
+                upsert=True
+            )
 
-    # If no revenue exists, proceed to insert/update the revenue
-    if revenue:
-        company_collection.update_one(
-            {'name': company_name},
-            {'$set': {'firmographic.revenue_range.revenue': revenue}},
-            upsert=True
-        )
-        print(f"Updated {company_name} with revenue: {revenue}")
-    else:
-        print(f"Revenue not found for {company_name}, skipping.")
+            if result.matched_count > 0:
+                print(f"Updated company with ID {company_id} with revenue: {revenue}")
+            else:
+                print(f"Failed to update company with ID {company_id}.")
+        else:
+            print(f"Revenue not found for company ID {company_id}, skipping.")
+    except Exception as e:
+        print(f"Error updating company in DB: {e}")
 
 def main():
-    # Fetch companies from MongoDB (you can filter as needed)
-    # companies = company_collection.find()
-
     try:
         companies = company_collection.find({'firmographic.revenue_range.revenue': {'$exists': False}})
-
+        
         for company in companies:
             company_name = company['name']
-            print(f"Fetching revenue for {company_name}...")
+            companyId = company['_id']
 
-            # Check if revenue already exists, skip if it does
-            # existing_revenue = company_collection.find_one({'name': company_name, 'firmographic.revenue_range.revenue': {'$exists': True, '$ne': ''}})
-            # if existing_revenue:
-            #     print(f"Revenue for {company_name} already exists, skipping.")
-            #     continue
+            print(f"Fetching revenue for {company_name}...")
 
             # Get the revenue from Google
             revenue = get_company_revenue(company_name)
 
             # Randomly call human search
-            if action.unpredictable_choice([True, False]):
-                human_search()  # Perform the human search simulation
+            try:
+                if action.unpredictable_choice([True, False]):
+                    human_search()  # Perform the human search simulation
+            except Exception as e:
+                print(f"Error during human search: {e}")
 
             # Update the revenue in MongoDB
-            update_revenue_in_db(company_name, revenue)
+            update_revenue_in_db(companyId, revenue)
 
-    except Exception as e :
-        print("Skipped...")
-
-
-
-
+    except Exception as e:
+        print(f"Main function encountered an error: {e}")
 
 if __name__ == "__main__":
-    main()
-
-    # Close the driver when done
-    driver.quit()
+    try:
+        main()
+    except Exception as e:
+        print(f"Script crashed: {e}")
+    finally:
+        # Ensure driver gets closed even if an error occurs
+        driver.quit()

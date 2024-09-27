@@ -11,17 +11,23 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 import action
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.keys import Keys
 
 # MongoDB connection setup
-client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
-db = client['warehouse']  # Replace with your database name
-company_collection = db['googlemapscompanies']  # Replace with your collection name
+try:
+    client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
+    db = client['warehouse']  # Replace with your database name
+    company_collection = db['googlemapscompanies']  # Replace with your collection name
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
 
 # Firefox WebDriver setup
-firefox_options = Options()
-# firefox_options.add_argument("--headless")  # Run Firefox in headless mode
-driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
+try:
+    firefox_options = Options()
+    # firefox_options.add_argument("--headless")  # Run Firefox in headless mode
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
+except Exception as e:
+    print(f"Error setting up Firefox WebDriver: {e}")
 
 # Wait configuration
 wait = WebDriverWait(driver, 10)
@@ -32,14 +38,20 @@ def unpredictable_choice(arr):
 
 # Function to mimic human-like typing
 def human_typing(element, text):
-    for char in text:
-        element.send_keys(char)
-        time.sleep(random.uniform(0.05, 0.2))
+    try:
+        for char in text:
+            element.send_keys(char)
+            time.sleep(random.uniform(0.05, 0.2))
+    except Exception as e:
+        print(f"Error during human typing: {e}")
 
 # Function to mimic human-like mouse movements
 def human_mouse_movements(x, y, dx, dy):
-    pyautogui.moveTo(x, y)
-    pyautogui.moveRel(dx, dy)
+    try:
+        pyautogui.moveTo(x, y)
+        pyautogui.moveRel(dx, dy)
+    except Exception as e:
+        print(f"Error during human-like mouse movements: {e}")
 
 # Function to mimic human-like search
 def get_human_search_text():
@@ -141,7 +153,9 @@ def get_human_search_text():
         "self-care activities for mental health",
         "tips for effective time management"
     ]
+
     return google_search_strings
+
 
 def human_search():
     try:
@@ -154,139 +168,73 @@ def human_search():
         search_bar.send_keys(Keys.ENTER)
         time.sleep(5)
         human_mouse_movements(10, 20, 40, 12)
-        # Simulate clicking the first result
         first_result = driver.find_element(By.CSS_SELECTOR, 'h3')
         first_result.click()
     except Exception as e:
         print(f"Google search failed: {e}")
 
-
-
-
 def get_company_employee_count(company_name):
-
     search_prompts = [
-        f"{company_name} employee count",
-        f"number of employees at {company_name}",
-        f"{company_name} workforce size",
-        f"how many people work at {company_name}",
-        f"{company_name} total employees",
-        f"{company_name} headcount",
-        f"{company_name} staff size 2024",
-        f"{company_name} number of employees LinkedIn"
+        f"{company_name} employee count", f"{company_name} workforce size",
+        f"{company_name} total employees", f"{company_name} staff size 2024"
     ]
     
     for prompt in search_prompts:
-        search_url = f"https://www.google.com/search?q={prompt}"
-        driver.get(search_url)
-        time.sleep(2)  # Wait for the page to load
-
-        # Parse the page content
-        # soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-        # # Find the <mark> tag inside the <span> or any other parent element
-        # mark_element = soup.find('mark', class_='QVRyCf')
-        # print(mark_element)
-        
-        # if mark_element:
-        #     # Return the text inside the <mark> tag
-        #     return mark_element.text
-
-
         try:
+            search_url = f"https://www.google.com/search?q={prompt}"
+            driver.get(search_url)
+            time.sleep(2)
+
             span_element = driver.find_element(By.CSS_SELECTOR, 'span.hgKElc')
-            
-            # Find the <b> tag inside the span
             b_element = span_element.find_element(By.TAG_NAME, 'b')
             
-            # If found, return the text inside the <b> tag
             if b_element:
                 return b_element.text
-
         except Exception as e:
-            print(f"Couldn't find for {company_name} with prompt '{prompt}'")
-
+            print(f"Couldn't find employee count for {company_name} with prompt '{prompt}': {e}")
+    
     return None
 
-
-def update_employee_count_in_db(company_name, employee_count):
-    """
-    Function to update the company employee count in MongoDB.
-    """
-    # Check if employee count is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.employee_count': {'$exists': True, '$ne': ''}})
-    if existing_company:
-        print(f"Employee count already exists for {company_name}, skipping.")
-        return
-
-    # If no employee count exists, proceed to insert/update the employee count
+def update_employee_count_in_db(company_id, employee_count):
     if employee_count:
-        company_collection.update_one(
-            {'name': company_name},
-            {'$set': {'firmographic.employee_count': employee_count}},
-            upsert=True
-        )
-        print(f"Updated {company_name} with employee count: {employee_count}")
+        try:
+            result = company_collection.update_one(
+                {'_id': company_id},
+                {'$set': {'firmographic.employee_count': employee_count}},
+                upsert=True
+            )
+            if result.matched_count > 0:
+                print(f"Updated company with ID {company_id} with employee count: {employee_count}")
+            else:
+                print(f"Failed to update company with ID {company_id}.")
+        except Exception as e:
+            print(f"Error updating employee count for company ID {company_id}: {e}")
     else:
-        print(f"Employee count not found for {company_name}, skipping.")
-
-
-
-# def main():
-#     # Fetch companies from MongoDB (you can filter as needed)
-#     companies = company_collection.find()
-
-#     for company in companies:
-#         company_name = company['name']
-#         print(f"Fetching employee count for {company_name}...")
-
-#         # Check if employee count already exists, skip if it does
-#         existing_employee_count = company_collection.find_one({'name': company_name, 'firmographic.employee_count': {'$exists': True, '$ne': ''}})
-#         if existing_employee_count:
-#             print(f"Employee count for {company_name} already exists, skipping.")
-#             continue
-
-#         # Get the employee count from Google
-#         employee_count = get_company_employee_count(company_name)
-
-#         # Randomly call human search
-#         if action.unpredictable_choice([True, False]):
-#             human_search()  # Perform the human search simulation
-
-#         # Update the employee count in MongoDB
-#         update_employee_count_in_db(company_name, employee_count)
-
-
-import random
+        print(f"Employee count not found for company ID {company_id}, skipping.")
 
 def main():
-    # Fetch companies that don't have an employee count in firmographics
-    companies_without_employee_count = list(company_collection.find({'firmographic.employee_count': {'$exists': False}}))
-  
     try:
-
+        companies_without_employee_count = list(company_collection.find({'firmographic.employee_count': {'$exists': False}}))
+        
         for company in companies_without_employee_count:
-            company_name = company['name']
-            print(f"Fetching employee count for {company_name}...")
+            try:
+                company_name = company['name']
+                companyId = company['_id']
+                print(f"Fetching employee count for {company_name}...")
 
-            # Get the employee count from Google
-            employee_count = get_company_employee_count(company_name)
-
-            # Randomly call human search
-            if random.choice([True, False ]):  # Use random.choice for randomness
-                human_search()  # Perform the human search simulation
-
-            # Update the employee count in MongoDB
-            update_employee_count_in_db(company_name, employee_count)
-
-    except Exception as e :
-        print("Error getting employee count")
-
-
-
+                employee_count = get_company_employee_count(company_name)
+                
+                if random.choice([True, False]):
+                    human_search()  # Perform the human search simulation
+                
+                update_employee_count_in_db(companyId, employee_count)
+            except Exception as e:
+                print(f"Error processing company {company_name}: {e}")
+    except Exception as e:
+        print(f"Error fetching companies from database: {e}")
 
 if __name__ == "__main__":
-    main()
-
-    # Close the driver when done
-    driver.quit()
+    try:
+        main()
+    finally:
+        driver.quit()

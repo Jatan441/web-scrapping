@@ -11,19 +11,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 import action
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.keys import Keys
 
 
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
-db = client['warehouse']  # Replace with your database name
-company_collection = db['googlemapscompanies']  # Replace with your collection name
+db = client['warehouse']
+company_collection = db['googlemapscompanies']
 
 # Firefox WebDriver setup
 firefox_options = Options()
-# firefox_options.add_argument("--headless")  # Run Firefox in headless mode
 driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
-
 
 # Wait configuration
 wait = WebDriverWait(driver, 10)
@@ -40,7 +38,7 @@ def human_mouse_movements(x, y, dx, dy):
     pyautogui.moveTo(x, y)
     pyautogui.moveRel(dx, dy)
 
-# Function to mimic human-like search
+# Predefined human-like search terms
 def get_human_search_text():
     google_search_strings = [
         # General Information
@@ -140,109 +138,81 @@ def get_human_search_text():
         "self-care activities for mental health",
         "tips for effective time management"
     ]
+
     return google_search_strings
 
 def human_search():
+    """
+    Perform a human-like search on Google by typing in the search bar and interacting with results.
+    """
     try:
-        time.sleep(5)
         driver.get('https://www.google.com/')
         search_bar = driver.find_element(By.TAG_NAME, 'textarea')
         human_typing(search_bar, action.unpredictable_choice(get_human_search_text()))
-        actions.move_to_element(search_bar).perform()
-        time.sleep(random.uniform(0.05, 20))
         search_bar.send_keys(Keys.ENTER)
         time.sleep(5)
         human_mouse_movements(10, 20, 40, 12)
-        # Simulate clicking the first result
         first_result = driver.find_element(By.CSS_SELECTOR, 'h3')
         first_result.click()
     except Exception as e:
         print(f"Google search failed: {e}")
 
-
 def get_company_industry(company_name):
     """
-    Function to search Google for the company's industry information.
+    Search for the company's industry information using Google and scrape it using BeautifulSoup.
     """
     search_url = f"https://www.google.com/search?q={company_name}+primary industry"
     driver.get(search_url)
-    time.sleep(2)  # Wait for the page to load
-
-
+    time.sleep(2)
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    # Look for the span with class 'hgKElc' and then find the <b> tag inside it
     span_element = soup.find('span', class_='hgKElc')
     if span_element:
-        b_tag = span_element.find('b')  # Find the <b> tag inside the span
+        b_tag = span_element.find('b')
         if b_tag:
-            return b_tag.text  
+            return b_tag.text
 
-
-    # Look for the span/div with relevant class or text that contains the industry information
-    # # Adapt this selector based on Google's structure
-    # industry_element = soup.find('span', text=lambda t: t and "industry" in t.lower()) 
-
-    # if industry_element:
-    #     industry_text = industry_element.find_next('span').text  # Get the industry text from the next span
-    #     return industry_text.strip()  # Clean up and return the industry text
-
-    # return None
-
-def update_industry_in_db(company_name, industry):
+def update_industry_in_db(company_id, industry):
     """
-    Function to update the company industry in MongoDB.
+    Update MongoDB with the company's industry if it's not already present.
     """
-    # Check if industry is already present in the database
-    existing_company = company_collection.find_one({'name': company_name, 'firmographic.industry': {'$exists': True, '$ne': ''}})
-    if existing_company:
-        print(f"Industry already exists for {company_name}, skipping.")
-        return
-
-    # If no industry exists, proceed to insert/update the industry
     if industry:
-        company_collection.update_one(
-            {'name': company_name},
+        result = company_collection.update_one(
+            {'_id': company_id},
             {'$set': {'firmographic.industry': industry}},
             upsert=True
         )
-        print(f"Updated {company_name} with industry: {industry}")
+        if result.matched_count > 0:
+            print(f"Updated company with ID {company_id} with industry: {industry}")
+        else:
+            print(f"Failed to update company with ID {company_id}.")
     else:
-        print(f"Industry not found for {company_name}, skipping.")
+        print(f"Industry not found for company ID {company_id}, skipping.")
 
 def main():
-    # Fetch companies from MongoDB (you can filter as needed)
+    """
+    Main function to fetch companies from MongoDB, get industry info from Google, and update MongoDB.
+    """
     try:
-
         companies = company_collection.find({'firmographic.industry': {'$exists': False}})
 
         for company in companies:
-            company_name = company['name']
-            print(f"Fetching industry for {company_name}...")
+            try:
+                company_name = company['name']
+                company_id = company['_id']
+                print(f"Fetching industry for {company_name}...")
 
-            # Check if industry already exists, skip if it does
-            # existing_industry = company_collection.find_one({'name': company_name, 'firmographic.industry': {'$exists': True, '$ne': ''}})
-            # if existing_industry:
-            #     print(f"Industry for {company_name} already exists, skipping.")
-            #     continue
+                industry = get_company_industry(company_name)
 
-        
+                if action.unpredictable_choice([True, False]):
+                    human_search()
 
-            # Get the industry from Google
-            industry = get_company_industry(company_name)
-
-                # Randomly call human search
-            if action.unpredictable_choice([True, False]):
-                human_search()  # Perform the human search simulation
-
-            # Update the industry in MongoDB
-            update_industry_in_db(company_name, industry)
-    except Exception as e :
-        # print(f"Marked document with _id: {document['_id']} as skipped")
-        print("skipped...")
+                update_industry_in_db(company_id, industry)
+            except Exception as e:
+                print(f"Skipping company {company_name} due to error: {e}")
+    except Exception as e:
+        print(f"Error fetching companies: {e}")
 
 if __name__ == "__main__":
     main()
-
-    # Close the driver when done
     driver.quit()
