@@ -171,7 +171,7 @@ def human_search():
         first_result = driver.find_element(By.CSS_SELECTOR, 'h3')
         first_result.click()
     except Exception as e:
-        print(f"Google search failed: {e}")
+        print(f"Google search failed:")
 
 def get_company_employee_count(company_name):
     search_prompts = [
@@ -191,7 +191,7 @@ def get_company_employee_count(company_name):
             if b_element:
                 return b_element.text
         except Exception as e:
-            print(f"Couldn't find employee count for {company_name} with prompt '{prompt}': {e}")
+            print(f"Couldn't find employee count for {company_name} with prompt '{prompt}':")
     
     return None
 
@@ -225,15 +225,22 @@ def update_employee_count_in_db(company_id, employee_count):
 
 
 def main():
-    try:
-        companies_without_employee_count = list(company_collection.find({'firmographic.employee_count': {'$exists': False}}))
+
+    while True:
+
+        try:
+            company = company_collection.find_one({'firmographic.employee_count': {'$exists': False}})
+
+            if not company :
+                print("No companies to process")
+                break
+
+            
         
-        for company in companies_without_employee_count:
             try:
                 company_name = company['name']
                 companyId = company['_id']
                 print(f"Fetching employee count for {company_name}...")
-
                 employee_count = get_company_employee_count(company_name)
                 
                 if random.choice([True, False]):
@@ -242,8 +249,8 @@ def main():
                 update_employee_count_in_db(companyId, employee_count)
             except Exception as e:
                 print(f"Error processing company {company_name}: {e}")
-    except Exception as e:
-        print(f"Error fetching companies from database: {e}")
+        except Exception as e:
+            print(f"Error fetching companies from database: {e}")
 
 if __name__ == "__main__":
     try:

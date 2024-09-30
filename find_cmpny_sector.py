@@ -155,7 +155,7 @@ def human_search():
         first_result = driver.find_element(By.CSS_SELECTOR, 'h3')
         first_result.click()
     except Exception as e:
-        print(f"Google search failed: {e}")
+        print(f"Google search failed:")
 
 # Get company sector from Google search results
 def get_company_sector(company_name):
@@ -176,22 +176,8 @@ def get_company_sector(company_name):
                 if b_tag:
                     return b_tag.text
         except Exception as e:
-            print(f"Couldn't find sector for {company_name} with prompt '{prompt}': {e}")
+            print(f"Couldn't find sector for {company_name} with prompt '{prompt}'")
 
-# Update sector in MongoDB
-# def update_sector_in_db(company_id, sector):
-#     if sector:
-#         result = company_collection.update_one(
-#             {'_id': company_id},
-#             {'$set': {'firmographic.sector': sector}},
-#             upsert=True
-#         )
-#         if result.matched_count > 0:
-#             print(f"Updated company with ID {company_id} with sector: {sector}")
-#         else:
-#             print(f"Failed to update company with ID {company_id}.")
-#     else:
-#         print(f"Sector not found for company ID {company_id}, skipping.")
 
 
 def update_sector_in_db(company_id, sector):
@@ -223,8 +209,14 @@ def update_sector_in_db(company_id, sector):
 # Main function to process companies
 def main():
     try:
-        companies = company_collection.find({'firmographic.sector': {'$exists': False}})
-        for company in companies:
+        while True :
+
+            company = company_collection.find_one({'firmographic.sector': {'$exists': False}})
+        
+            if not company :
+                print("no companies to process")
+                break
+
             company_name = company['name']
             company_id = company['_id']
             print(f"Fetching sector for {company_name}...")
@@ -235,7 +227,7 @@ def main():
 
             update_sector_in_db(company_id, sector)
     except Exception as e:
-        print(f"Skipped a document due to error: {e}")
+        print(f"Skipped a document due to error:")
 
 if __name__ == "__main__":
     main()

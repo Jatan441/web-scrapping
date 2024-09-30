@@ -209,24 +209,25 @@ def update_revenue_in_db(company_id, revenue):
 
 def main():
     try:
-        companies = company_collection.find({'firmographic.revenue_range.revenue': {'$exists': False}})
-        
-        for company in companies:
+        while True :
+
+            company = company_collection.find_one({'firmographic.revenue_range.revenue': {'$exists': False}})
+            
+            if not company :
+                print("no companies to process")
+                break
+
             company_name = company['name']
             companyId = company['_id']
-
             print(f"Fetching revenue for {company_name}...")
-
             # Get the revenue from Google
             revenue = get_company_revenue(company_name)
-
             # Randomly call human search
             try:
                 if action.unpredictable_choice([True, False]):
                     human_search()  # Perform the human search simulation
             except Exception as e:
-                print(f"Error during human search: {e}")
-
+                print(f"Error during human search:")
             # Update the revenue in MongoDB
             update_revenue_in_db(companyId, revenue)
 

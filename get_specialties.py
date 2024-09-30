@@ -13,11 +13,10 @@ import action
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
-
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
-db = client['warehouse']
-company_collection = db['googlemapscompanies']
+db = client['warehouse']  # Replace with your database name
+company_collection = db['googlemapscompanies']  # Replace with your collection name
 
 # Firefox WebDriver setup
 firefox_options = Options()
@@ -38,7 +37,7 @@ def human_mouse_movements(x, y, dx, dy):
     pyautogui.moveTo(x, y)
     pyautogui.moveRel(dx, dy)
 
-# Predefined human-like search terms
+# List of human-like search strings
 def get_human_search_text():
     google_search_strings = [
         # General Information
@@ -141,14 +140,15 @@ def get_human_search_text():
 
     return google_search_strings
 
+# Perform a human-like search on Google
 def human_search():
-    """
-    Perform a human-like search on Google by typing in the search bar and interacting with results.
-    """
     try:
         driver.get('https://www.google.com/')
         search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-        human_typing(search_bar, action.unpredictable_choice(get_human_search_text()))
+        search_text = action.unpredictable_choice(get_human_search_text())
+        human_typing(search_bar, search_text)
+        actions.move_to_element(search_bar).perform()
+        time.sleep(random.uniform(0.05, 20))
         search_bar.send_keys(Keys.ENTER)
         time.sleep(5)
         human_mouse_movements(10, 20, 40, 12)
@@ -157,75 +157,88 @@ def human_search():
     except Exception as e:
         print(f"Google search failed:")
 
-def get_company_industry(company_name):
+# Get company specialties from Google search results
+def get_company_specialties(company_name):
+    search_prompts = [
+        f"{company_name} specialties"
+        f"What are the specialties of {company_name}?"
+        f"{company_name} areas of expertise"
+        f"{company_name} core specialties"
+        f"{company_name} company specialties and focus areas"
+        f"{company_name} key services and specialties"
+        f"Specialization of {company_name}"
+        f"{company_name} business specialties"
+        f"Main expertise of {company_name}"
+        f"{company_name} specialized services/products"
+    ]
+
+    for prompt in search_prompts:
+        try:
+            search_url = f"https://www.google.com/search?q={prompt}"
+            driver.get(search_url)
+            time.sleep(2)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            span_element = soup.find('span', class_='hgKElc')
+            if span_element:
+                b_tag = span_element.find('b')
+                if b_tag:
+                    return b_tag.text
+        except Exception as e:
+            print(f"Couldn't find specialties for {company_name} with prompt '{prompt}'")
+    return None
+
+
+
+def update_specialties_in_db(company_id, specialties):
     """
-    Search for the company's industry information using Google and scrape it using BeautifulSoup.
+    Update MongoDB with the company's specialties.
+    If specialties is not found, update with an empty string.
     """
-    search_url = f"https://www.google.com/search?q={company_name}+primary industry"
-    driver.get(search_url)
-    time.sleep(2)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    # If specialties is not found, set it as an empty string
+    if not specialties:
+        specialties = ""  # Update with an empty string if no specialties is found
 
-    span_element = soup.find('span', class_='hgKElc')
-    if span_element:
-        b_tag = span_element.find('b')
-        if b_tag:
-            return b_tag.text
-
-
-
-
-def update_industry_in_db(company_id, industry):
-    """
-    Update MongoDB with the company's industry.
-    If industry is not found, update with an empty string.
-    """
-    # If industry is not found, set it as an empty string
-    if not industry:
-        industry = ""  # Update with an empty string if no industry is found
-
-    # Update the collection with the found or empty industry value
+    # Update the collection with the found or empty specialties value
     result = company_collection.update_one(
         {'_id': company_id},
-        {'$set': {'firmographic.industry': industry}},
+        {'$set': {'firmographic.specialties': specialties}},
         upsert=True
     )
 
     # Check if the document was successfully updated
     if result.matched_count > 0:
-        if industry:
-            print(f"Updated company with ID {company_id} with industry: {industry}")
+        if specialties:
+            print(f"Updated company with ID {company_id} with specialties: {specialties}")
         else:
-            print(f"Updated company with ID {company_id} but no industry found (set as empty string).")
+            print(f"Updated company with ID {company_id} but no specialties found (set as empty string).")
     else:
         print(f"Failed to update company with ID {company_id}.")
 
 
+# Main function to process companies
 def main():
-    """
-    Main function to fetch companies from MongoDB, get industry info from Google, and update MongoDB.
-    """
     try:
-        while True:
+        while True :
 
-            company = company_collection.find_one({'firmographic.industry': {'$exists': False}})
-
+            company = company_collection.find_one({'firmographic.specialties': {'$exists': False}})
+        
             if not company :
                 print("no companies to process")
                 break
-        
-            try:
-                company_name = company['name']
-                company_id = company['_id']
-                print(f"Fetching industry for {company_name}...")
-                industry = get_company_industry(company_name)
-                if action.unpredictable_choice([True, False]):
-                    human_search()
-                update_industry_in_db(company_id, industry)
-            except Exception as e:
-                print(f"Skipping company {company_name} due to error:")
+
+            company_name = company['name']
+            company_id = company['_id']
+            print(f"Fetching specialties for {company_name}...")
+            specialties = get_company_specialties(company_name)
+
+            print(specialties)
+
+            if action.unpredictable_choice([True, False]):
+                human_search()
+
+            update_specialties_in_db(company_id, specialties)
     except Exception as e:
-        print(f"Error fetching companies:")
+        print(f"Skipped a document due to error:")
 
 if __name__ == "__main__":
     main()
