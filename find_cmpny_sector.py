@@ -179,19 +179,46 @@ def get_company_sector(company_name):
             print(f"Couldn't find sector for {company_name} with prompt '{prompt}': {e}")
 
 # Update sector in MongoDB
+# def update_sector_in_db(company_id, sector):
+#     if sector:
+#         result = company_collection.update_one(
+#             {'_id': company_id},
+#             {'$set': {'firmographic.sector': sector}},
+#             upsert=True
+#         )
+#         if result.matched_count > 0:
+#             print(f"Updated company with ID {company_id} with sector: {sector}")
+#         else:
+#             print(f"Failed to update company with ID {company_id}.")
+#     else:
+#         print(f"Sector not found for company ID {company_id}, skipping.")
+
+
 def update_sector_in_db(company_id, sector):
-    if sector:
-        result = company_collection.update_one(
-            {'_id': company_id},
-            {'$set': {'firmographic.sector': sector}},
-            upsert=True
-        )
-        if result.matched_count > 0:
+    """
+    Update MongoDB with the company's sector.
+    If sector is not found, update with an empty string.
+    """
+    # If sector is not found, set it as an empty string
+    if not sector:
+        sector = ""  # Update with an empty string if no sector is found
+
+    # Update the collection with the found or empty sector value
+    result = company_collection.update_one(
+        {'_id': company_id},
+        {'$set': {'firmographic.sector': sector}},
+        upsert=True
+    )
+
+    # Check if the document was successfully updated
+    if result.matched_count > 0:
+        if sector:
             print(f"Updated company with ID {company_id} with sector: {sector}")
         else:
-            print(f"Failed to update company with ID {company_id}.")
+            print(f"Updated company with ID {company_id} but no sector found (set as empty string).")
     else:
-        print(f"Sector not found for company ID {company_id}, skipping.")
+        print(f"Failed to update company with ID {company_id}.")
+
 
 # Main function to process companies
 def main():

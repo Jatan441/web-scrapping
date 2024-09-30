@@ -172,22 +172,49 @@ def get_company_industry(company_name):
         if b_tag:
             return b_tag.text
 
+# def update_industry_in_db(company_id, industry):
+#     """
+#     Update MongoDB with the company's industry if it's not already present.
+#     """
+#     if industry:
+#         result = company_collection.update_one(
+#             {'_id': company_id},
+#             {'$set': {'firmographic.industry': industry}},
+#             upsert=True
+#         )
+#         if result.matched_count > 0:
+#             print(f"Updated company with ID {company_id} with industry: {industry}")
+#         else:
+#             print(f"Failed to update company with ID {company_id}.")
+#     else:
+#         print(f"Industry not found for company ID {company_id}, skipping.")
+
+
 def update_industry_in_db(company_id, industry):
     """
-    Update MongoDB with the company's industry if it's not already present.
+    Update MongoDB with the company's industry.
+    If industry is not found, update with an empty string.
     """
-    if industry:
-        result = company_collection.update_one(
-            {'_id': company_id},
-            {'$set': {'firmographic.industry': industry}},
-            upsert=True
-        )
-        if result.matched_count > 0:
+    # If industry is not found, set it as an empty string
+    if not industry:
+        industry = ""  # Update with an empty string if no industry is found
+
+    # Update the collection with the found or empty industry value
+    result = company_collection.update_one(
+        {'_id': company_id},
+        {'$set': {'firmographic.industry': industry}},
+        upsert=True
+    )
+
+    # Check if the document was successfully updated
+    if result.matched_count > 0:
+        if industry:
             print(f"Updated company with ID {company_id} with industry: {industry}")
         else:
-            print(f"Failed to update company with ID {company_id}.")
+            print(f"Updated company with ID {company_id} but no industry found (set as empty string).")
     else:
-        print(f"Industry not found for company ID {company_id}, skipping.")
+        print(f"Failed to update company with ID {company_id}.")
+
 
 def main():
     """

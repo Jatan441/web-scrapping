@@ -185,21 +185,27 @@ def get_company_revenue(company_name):
 
 def update_revenue_in_db(company_id, revenue):
     try:
-        if revenue:
-            result = company_collection.update_one(
-                {'_id': company_id},
-                {'$set': {'firmographic.revenue_range.revenue': revenue}},
-                upsert=True
-            )
+        # If revenue is not found, set it as an empty string
+        if not revenue:
+            revenue = ""  # Update with empty string if no revenue is found
+            
+        # If revenue is found, it will remain as it is
+        result = company_collection.update_one(
+            {'_id': company_id},
+            {'$set': {'firmographic.revenue_range.revenue': revenue}},
+            upsert=True
+        )
 
-            if result.matched_count > 0:
+        if result.matched_count > 0:
+            if revenue:
                 print(f"Updated company with ID {company_id} with revenue: {revenue}")
             else:
-                print(f"Failed to update company with ID {company_id}.")
+                print(f"Updated company with ID {company_id} but no revenue found (set as empty string).")
         else:
-            print(f"Revenue not found for company ID {company_id}, skipping.")
+            print(f"Failed to update company with ID {company_id}.")
     except Exception as e:
         print(f"Error updating company in DB: {e}")
+
 
 def main():
     try:

@@ -196,21 +196,33 @@ def get_company_employee_count(company_name):
     return None
 
 def update_employee_count_in_db(company_id, employee_count):
-    if employee_count:
-        try:
-            result = company_collection.update_one(
-                {'_id': company_id},
-                {'$set': {'firmographic.employee_count': employee_count}},
-                upsert=True
-            )
-            if result.matched_count > 0:
+    """
+    Update MongoDB with the company's employee count.
+    If employee count is not found, update with an empty string.
+    """
+    # If employee_count is not found or is None, set it to an empty string
+    if not employee_count:
+        employee_count = ""  # Update with an empty string if no employee count is found
+
+    try:
+        # Update the collection with the found or empty employee count value
+        result = company_collection.update_one(
+            {'_id': company_id},
+            {'$set': {'firmographic.employee_count': employee_count}},
+            upsert=True
+        )
+
+        # Check if the document was successfully updated
+        if result.matched_count > 0:
+            if employee_count:
                 print(f"Updated company with ID {company_id} with employee count: {employee_count}")
             else:
-                print(f"Failed to update company with ID {company_id}.")
-        except Exception as e:
-            print(f"Error updating employee count for company ID {company_id}: {e}")
-    else:
-        print(f"Employee count not found for company ID {company_id}, skipping.")
+                print(f"Updated company with ID {company_id} but no employee count found (set as empty string).")
+        else:
+            print(f"Failed to update company with ID {company_id}.")
+    except Exception as e:
+        print(f"Error updating employee count for company ID {company_id}: {e}")
+
 
 def main():
     try:
