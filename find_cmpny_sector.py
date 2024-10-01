@@ -166,8 +166,12 @@ def get_company_sector(company_name):
 
     for prompt in search_prompts:
         try:
-            search_url = f"https://www.google.com/search?q={prompt}"
-            driver.get(search_url)
+            driver.get('https://www.google.com/')
+            search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+            human_typing(search_bar, prompt)
+            actions.move_to_element(search_bar).perform()
+            time.sleep(random.uniform(0.05, 20))
+            search_bar.send_keys(Keys.ENTER)
             time.sleep(2)
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             span_element = soup.find('span', class_='hgKElc')
@@ -189,7 +193,9 @@ def update_sector_in_db(company_id, sector):
     if not sector:
         sector = ""  # Update with an empty string if no sector is found
 
-    # Update the collection with the found or empty sector value
+    # Update the collection with the found or empty sector value'
+
+    
     result = company_collection.update_one(
         {'_id': company_id},
         {'$set': {'firmographic.sector': sector}},

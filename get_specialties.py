@@ -160,22 +160,26 @@ def human_search():
 # Get company specialties from Google search results
 def get_company_specialties(company_name):
     search_prompts = [
-        f"{company_name} specialties"
-        f"What are the specialties of {company_name}?"
-        f"{company_name} areas of expertise"
-        f"{company_name} core specialties"
-        f"{company_name} company specialties and focus areas"
-        f"{company_name} key services and specialties"
-        f"Specialization of {company_name}"
-        f"{company_name} business specialties"
-        f"Main expertise of {company_name}"
+        f"{company_name} specialties",
+        f"What are the specialties of {company_name}?",
+        f"{company_name} areas of expertise",
+        f"{company_name} core specialties",
+        f"{company_name} company specialties and focus areas",
+        f"{company_name} key services and specialties",
+        f"Specialization of {company_name}",
+        f"{company_name} business specialties",
+        f"Main expertise of {company_name}",
         f"{company_name} specialized services/products"
     ]
 
     for prompt in search_prompts:
         try:
-            search_url = f"https://www.google.com/search?q={prompt}"
-            driver.get(search_url)
+            driver.get('https://www.google.com/')
+            search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+            human_typing(search_bar, prompt)
+            actions.move_to_element(search_bar).perform()
+            time.sleep(random.uniform(0.05, 20))
+            search_bar.send_keys(Keys.ENTER)
             time.sleep(2)
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             span_element = soup.find('span', class_='hgKElc')
@@ -183,6 +187,7 @@ def get_company_specialties(company_name):
                 b_tag = span_element.find('b')
                 if b_tag:
                     return b_tag.text
+                
         except Exception as e:
             print(f"Couldn't find specialties for {company_name} with prompt '{prompt}'")
     return None
@@ -199,9 +204,13 @@ def update_specialties_in_db(company_id, specialties):
         specialties = ""  # Update with an empty string if no specialties is found
 
     # Update the collection with the found or empty specialties value
+    specialties_array = [item.strip() for item in specialties.split(',')]
+
+
+
     result = company_collection.update_one(
         {'_id': company_id},
-        {'$set': {'firmographic.specialties': specialties}},
+        {'$set': {'firmographic.specialties': specialties_array}},
         upsert=True
     )
 
@@ -231,7 +240,6 @@ def main():
             print(f"Fetching specialties for {company_name}...")
             specialties = get_company_specialties(company_name)
 
-            print(specialties)
 
             if action.unpredictable_choice([True, False]):
                 human_search()
