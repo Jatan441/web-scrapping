@@ -12,6 +12,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 import action
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
 
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
@@ -157,75 +158,93 @@ def human_search():
     except Exception as e:
         print(f"Google search failed:")
 
-# Get company specialties from Google search results
-def get_company_specialties(company_name):
-    search_prompts = [
-        f"{company_name} company specialties",
-        f"What are the specialties of {company_name}?",
-        f"{company_name} areas of expertise",
-        f"{company_name} core specialties",
-        f"{company_name} company specialties and focus areas",
-        f"{company_name} key services and specialties",
-        f"Specialization of {company_name}",
-        f"{company_name} business specialties",
-        f"Main expertise of {company_name}",
-        f"{company_name} specialized services/products"
-    ]
 
-    for prompt in search_prompts:
-        try:
-            driver.get('https://www.google.com/')
-            search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-            human_typing(search_bar, prompt)
-            actions.move_to_element(search_bar).perform()
-            time.sleep(random.uniform(0.05, 20))
-            search_bar.send_keys(Keys.ENTER)
-            time.sleep(2)
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            span_element = soup.find('span', class_='hgKElc')
-            if span_element:
-                b_tag = span_element.find('b')
-                if b_tag:
-                    return b_tag.text
-                return span_element.text
-            ul_element = soup.find('ul',class_ = "i8Z77e")
-            if ul_element :
-                li_tags = ul_element.find_all('li')
-                li_texts = ", ".join([li.get_text(strip=True) for li in li_tags])
-                return li_texts
-                
-        except Exception as e:
-            print(f"Couldn't find specialties for {company_name} with prompt '{prompt}'")
-    return None
+# def get_company_logo(company_name):
+#     try:
+#         # Open Google search
+#         driver.get('https://www.google.com/')
+#         search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
 
+#         # Search for company name followed by "logo"
+#         search_query = f"{company_name} logo"
+#         search_box.send_keys(search_query)
+#         search_box.send_keys(Keys.RETURN)
 
+#         # Wait for search results to load and click on "Images" tab
+#         wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Images"))).click()
 
-def update_specialties_in_db(company_id, specialties):
-    """
-    Update MongoDB with the company's specialties.
-    If specialties is not found, update with an empty string.
-    """
-    # If specialties is not found, set it as an empty string
-    if not specialties:
-        specialties = ""  # Update with an empty string if no specialties is found
+#         # Wait for the image results to load and get the first image URL
+#         first_image = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'img')))
+#         logo_url = first_image.get_attribute('src')
 
-    # Update the collection with the found or empty specialties value
-    specialties_array = [item.strip() for item in specialties.split(',')]
+#         # If no logo URL is found or it's a data URL, return an empty string
+#         if not logo_url or logo_url.startswith('data:'):
+#             return ""
+
+#         return logo_url
+
+#     except Exception as e:
+#         print(f"Error fetching logo for {company_name}: {e}")
+#         return ""
+    
+    
+def get_company_logo(company_name):
+    try:
+        # Open Google search
+        driver.get('https://www.google.com/')
+        search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
+
+        # Search for company name followed by "company logo"
+        search_query = f"{company_name} company logo"
+        search_box.send_keys(search_query)
+        search_box.send_keys(Keys.RETURN)
+
+        # Wait for search results to load
+        time.sleep(2)  # Small delay to ensure results are loaded
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        div_element = soup.find('div', class_='gdOPf uhHOwf ez24Df')
+        if div_element:
+            img_tag = div_element.find('img')
+            if img_tag:
+                logo_url = img_tag.get('src')  # Correct way to get the src attribute
+                return logo_url
 
 
+        else:
+            print(f"No image divs found for {company_name}")
+            return ""
 
+    except Exception as e:
+        print(f"Error fetching logo for {company_name}: {e}")
+        return ""
+
+
+
+
+# Update company data in MongoDB with logo URL
+def update_company_logo_in_db(company_id, logo_url):
+    # If no logo URL is found, set it to an empty string
+    if not logo_url:
+        logo_url = ""
+    else:
+        # Ensure the logo URL has a full http/https URL
+        if not (logo_url.startswith("http://") or logo_url.startswith("https://")):
+            logo_url = "http://" + logo_url  # Add "http://" prefix if not present
+
+    # Update the company document in MongoDB
     result = company_collection.update_one(
         {'_id': company_id},
-        {'$set': {'firmographic.specialties': specialties_array}},
+        {'$set': {'image_url': logo_url}},  # Use the logo_url (or empty string if not found)
         upsert=True
     )
 
     # Check if the document was successfully updated
     if result.matched_count > 0:
-        if specialties:
-            print(f"Updated company with ID {company_id} with specialties: {specialties}")
+        if logo_url:
+            print(f"Updated company with ID {company_id} with logo: {logo_url}")
         else:
-            print(f"Updated company with ID {company_id} but no specialties found (set as empty string).")
+            print(f"Updated company with ID {company_id} but no logo found (set as empty string).")
     else:
         print(f"Failed to update company with ID {company_id}.")
 
@@ -233,26 +252,28 @@ def update_specialties_in_db(company_id, specialties):
 # Main function to process companies
 def main():
     try:
-        while True :
-
-            company = company_collection.find_one({'firmographic.specialties': ""})
+        while True:
+            company = company_collection.find_one({'image_url': {'$exists': False}})
         
-            if not company :
-                print("no companies to process")
+            if not company:
+                print("No companies to process")
                 break
 
             company_name = company['name']
             company_id = company['_id']
-            print(f"Fetching specialties for {company_name}...")
-            specialties = get_company_specialties(company_name)
+            print(f"Fetching logo for {company_name}...")
 
-
+            logo_url = get_company_logo(company_name)
+            update_company_logo_in_db(company_id, logo_url)
+            
+            print(logo_url)
             if action.unpredictable_choice([True, False]):
                 human_search()
 
-            update_specialties_in_db(company_id, specialties)
     except Exception as e:
-        print(f"Skipped a document due to error:")
+        print(f"Skipped a document due to error: {e}")
+
+
 
 if __name__ == "__main__":
     main()
