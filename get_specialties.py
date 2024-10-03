@@ -235,7 +235,7 @@ def main():
     try:
         while True :
 
-            company = company_collection.find_one({'firmographic.specialties': ""})
+            company = company_collection.find_one({'firmographic.specialties': "", 'processed': {'$ne': True}})
         
             if not company :
                 print("no companies to process")
@@ -246,6 +246,11 @@ def main():
             print(f"Fetching specialties for {company_name}...")
             specialties = get_company_specialties(company_name)
 
+            if not specialties:
+                print(f"Skipping {company_name} due to no specialties...")
+                # Mark the company as processed so it's not fetched again
+                company_collection.update_one({'_id': company_id}, {'$set': {'processed': True}})
+                continue
 
             if action.unpredictable_choice([True, False]):
                 human_search()
