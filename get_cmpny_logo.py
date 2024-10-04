@@ -182,7 +182,7 @@ def search_logo_url(company_name):
     # Wait for the image details to load and find the parent anchor tag with the URL
     time.sleep(5)
     # Get the link that contains the image's original source
-    image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img[@class="sFlh5c FyHeAf iPVvYb"]')
+    image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img')
     image_url = image_url_element.get_attribute("src")
     
     return image_url
