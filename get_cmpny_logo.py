@@ -159,33 +159,142 @@ def human_search():
         print(f"Google search failed:")
 
 
+# Function to move cursor and click
+def move_and_click(element):
+    actions.move_to_element(element).perform()  # Move cursor to the element
+    time.sleep(random.uniform(0.5, 1.5))  # Random delay to simulate human-like behavior
+    actions.click(element).perform()  # Click the element
+
+
+# def search_logo_url(company_name):
+#     search_query = f"{company_name} logo"
+#     driver.get('https://www.google.com/')
+#     search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+#     human_typing(search_bar, search_query)
+#     actions.move_to_element(search_bar).perform()
+#     time.sleep(random.uniform(0.05, 20))
+#     search_bar.send_keys(Keys.ENTER)
+#     # Wait for search results and go to images
+#     time.sleep(2)
+  
+#     images_tab = driver.find_element(By.LINK_TEXT, 'Images')
+#     images_tab.click()
+
+#     # Wait for the images to load and click the first image
+#     time.sleep(5)
+#     first_image = driver.find_element(By.XPATH, '//div[@class="H8Rx8c"]//img[@class="YQ4gaf"]')
+#     first_image.click()
+
+#     # Wait for the image details to load and find the parent anchor tag with the URL
+#     time.sleep(5)
+#     # Get the link that contains the image's original source
+#     image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img')
+#     image_url = image_url_element.get_attribute("src")
+    
+#     return image_url
+
+
+# def search_logo_url(company_name):
+#     search_query = f"{company_name} logo"
+#     driver.get('https://www.google.com/')
+    
+#     # Locate the search bar and simulate typing
+#     search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+    
+#     # Move the cursor to the search bar and click it before typing
+#     actions.move_to_element(search_bar).perform()
+#     search_bar.click()
+    
+#     # Simulate human typing in the search bar
+#     human_typing(search_bar, search_query)
+    
+#     # Simulate a delay to mimic human behavior
+#     time.sleep(random.uniform(0.5, 2))
+    
+#     # Submit the search query
+#     search_bar.send_keys(Keys.ENTER)
+    
+#     # Wait for the search results to load and then click on the Images tab
+#     time.sleep(3)
+#     images_tab = driver.find_element(By.LINK_TEXT, 'Images')
+    
+#     # Move the cursor to the Images tab before clicking it
+#     actions.move_to_element(images_tab).perform()
+#     time.sleep(random.uniform(0.5, 1.5))
+#     images_tab.click()
+
+#     # Wait for the images to load and click the first image
+#     time.sleep(5)
+#     first_image = driver.find_element(By.XPATH, '//div[@class="H8Rx8c"]//img[@class="YQ4gaf"]')
+    
+#     # Move the cursor to the first image before clicking
+#     actions.move_to_element(first_image).perform()
+#     time.sleep(random.uniform(0.5, 1.5))
+#     first_image.click()
+
+#     # Wait for the image details to load
+#     time.sleep(5)
+    
+#     # Locate the actual image URL
+#     image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img')
+#     image_url = image_url_element.get_attribute("src")
+
+#     return image_url
+
+
 
 def search_logo_url(company_name):
-    search_query = f"{company_name} logo"
-    driver.get('https://www.google.com/')
-    search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-    human_typing(search_bar, search_query)
-    actions.move_to_element(search_bar).perform()
-    time.sleep(random.uniform(0.05, 20))
-    search_bar.send_keys(Keys.ENTER)
-    # Wait for search results and go to images
-    time.sleep(2)
-  
-    images_tab = driver.find_element(By.LINK_TEXT, 'Images')
-    images_tab.click()
+    try :
+        search_query = f"{company_name} logo"
+        driver.get('https://www.google.com/')
+        
+        # Locate the search bar and simulate typing
+        search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+        
+        # Move the cursor to the search bar and click it before typing
+        move_and_click(search_bar)
+        
+        # Simulate human typing in the search bar
+        human_typing(search_bar, search_query)
+        
+        # Simulate a delay to mimic human behavior
+        time.sleep(random.uniform(0.5, 2))
+        
+        # Submit the search query
+        search_bar.send_keys(Keys.ENTER)
+        
+        # Wait for the search results to load and then click on the Images tab
+        time.sleep(3)
+        images_tab = driver.find_element(By.LINK_TEXT, 'Images')
+        
+        # Move the cursor to the Images tab and click it
+        move_and_click(images_tab)
 
-    # Wait for the images to load and click the first image
-    time.sleep(5)
-    first_image = driver.find_element(By.XPATH, '//div[@class="H8Rx8c"]//img[@class="YQ4gaf"]')
-    first_image.click()
+        # Wait for the images to load and click the first image
+        time.sleep(5)
+        first_image = driver.find_element(By.XPATH, '//div[@class="H8Rx8c"]//img[@class="YQ4gaf"]')
+        
+        # Move the cursor to the first image and click it
+        move_and_click(first_image)
 
-    # Wait for the image details to load and find the parent anchor tag with the URL
-    time.sleep(5)
-    # Get the link that contains the image's original source
-    image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img')
-    image_url = image_url_element.get_attribute("src")
-    
-    return image_url
+        # Wait for the image details to load
+        time.sleep(5)
+        
+        # Locate the actual image URL
+        image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img')
+        image_url = image_url_element.get_attribute("src")
+
+        if image_url:
+            return image_url  # Assuming you want the 'src' attribute
+        else:
+            print(f"No logo found for {company_name}")
+            return None
+                
+    except NoSuchElementException:
+        print(f"Element not found for {company_name}")
+        return None
+
+       
 
 
 # Update company data in MongoDB with logo URL
@@ -226,6 +335,7 @@ def main():
             print(f"Fetching logo for {company_name}...")
 
             logo_url = search_logo_url(company_name)
+            print(logo_url)
             update_company_logo_in_db(company_id, logo_url)
             
             # print(logo_url)
