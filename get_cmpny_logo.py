@@ -159,67 +159,33 @@ def human_search():
         print(f"Google search failed:")
 
 
-# def get_company_logo(company_name):
-#     try:
-#         # Open Google search
-#         driver.get('https://www.google.com/')
-#         search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
 
-#         # Search for company name followed by "logo"
-#         search_query = f"{company_name} logo"
-#         search_box.send_keys(search_query)
-#         search_box.send_keys(Keys.RETURN)
+def search_logo_url(company_name):
+    search_query = f"{company_name} logo"
+    driver.get('https://www.google.com/')
+    search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+    human_typing(search_bar, search_query)
+    actions.move_to_element(search_bar).perform()
+    time.sleep(random.uniform(0.05, 20))
+    search_bar.send_keys(Keys.ENTER)
+    # Wait for search results and go to images
+    time.sleep(2)
+  
+    images_tab = driver.find_element(By.LINK_TEXT, 'Images')
+    images_tab.click()
 
-#         # Wait for search results to load and click on "Images" tab
-#         wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Images"))).click()
+    # Wait for the images to load and click the first image
+    time.sleep(5)
+    first_image = driver.find_element(By.XPATH, '//div[@class="H8Rx8c"]//img[@class="YQ4gaf"]')
+    first_image.click()
 
-#         # Wait for the image results to load and get the first image URL
-#         first_image = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'img')))
-#         logo_url = first_image.get_attribute('src')
-
-#         # If no logo URL is found or it's a data URL, return an empty string
-#         if not logo_url or logo_url.startswith('data:'):
-#             return ""
-
-#         return logo_url
-
-#     except Exception as e:
-#         print(f"Error fetching logo for {company_name}: {e}")
-#         return ""
+    # Wait for the image details to load and find the parent anchor tag with the URL
+    time.sleep(5)
+    # Get the link that contains the image's original source
+    image_url_element = driver.find_element(By.XPATH, '//div[@class="p7sI2 PUxBg"]/a[@class="YsLeY"]/img[@class="sFlh5c FyHeAf iPVvYb"]')
+    image_url = image_url_element.get_attribute("src")
     
-    
-def get_company_logo(company_name):
-    try:
-        # Open Google search
-        driver.get('https://www.google.com/')
-        search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
-
-        # Search for company name followed by "company logo"
-        search_query = f"{company_name} company logo"
-        search_box.send_keys(search_query)
-        search_box.send_keys(Keys.RETURN)
-
-        # Wait for search results to load
-        time.sleep(2)  # Small delay to ensure results are loaded
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        div_element = soup.find('div', class_='gdOPf uhHOwf ez24Df')
-        if div_element:
-            img_tag = div_element.find('img')
-            if img_tag:
-                logo_url = img_tag.get('src')  # Correct way to get the src attribute
-                return logo_url
-
-
-        else:
-            print(f"No image divs found for {company_name}")
-            return ""
-
-    except Exception as e:
-        print(f"Error fetching logo for {company_name}: {e}")
-        return ""
-
-
+    return image_url
 
 
 # Update company data in MongoDB with logo URL
@@ -227,10 +193,6 @@ def update_company_logo_in_db(company_id, logo_url):
     # If no logo URL is found, set it to an empty string
     if not logo_url:
         logo_url = ""
-    else:
-        # Ensure the logo URL has a full http/https URL
-        if not (logo_url.startswith("http://") or logo_url.startswith("https://")):
-            logo_url = "http://" + logo_url  # Add "http://" prefix if not present
 
     # Update the company document in MongoDB
     result = company_collection.update_one(
@@ -263,10 +225,10 @@ def main():
             company_id = company['_id']
             print(f"Fetching logo for {company_name}...")
 
-            logo_url = get_company_logo(company_name)
+            logo_url = search_logo_url(company_name)
             update_company_logo_in_db(company_id, logo_url)
             
-            print(logo_url)
+            # print(logo_url)
             if action.unpredictable_choice([True, False]):
                 human_search()
 
