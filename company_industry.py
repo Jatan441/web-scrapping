@@ -157,20 +157,27 @@ def human_search():
     except Exception as e:
         print(f"Google search failed:")
 
-def get_company_industry(company_name):
-    """
-    Search for the company's industry information using Google and scrape it using BeautifulSoup.
-    """
-    search_url = f"https://www.google.com/search?q={company_name}+primary industry"
-    driver.get(search_url)
-    time.sleep(2)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    span_element = soup.find('span', class_='hgKElc')
-    if span_element:
-        b_tag = span_element.find('b')
-        if b_tag:
-            return b_tag.text
+def get_company_industry(company_name):
+    try :
+        driver.get('https://www.google.com/')
+        search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+        human_typing(search_bar, f"{company_name} primary industry")
+        actions.move_to_element(search_bar).perform()
+        time.sleep(random.uniform(0.05, 20))
+        search_bar.send_keys(Keys.ENTER)
+        time.sleep(2)
+        
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+        span_element = soup.find('span', class_='hgKElc')
+        if span_element:
+            b_tag = span_element.find('b')
+            if b_tag:
+                return b_tag.text
+                
+    except Exception as e:
+        print(f"Couldn't find sector for {company_name}")
 
 
 

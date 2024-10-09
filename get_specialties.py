@@ -181,6 +181,7 @@ def get_company_specialties(company_name):
             time.sleep(random.uniform(0.05, 20))
             search_bar.send_keys(Keys.ENTER)
             time.sleep(2)
+
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             span_element = soup.find('span', class_='hgKElc')
             if span_element:
@@ -216,7 +217,7 @@ def update_specialties_in_db(company_id, specialties):
 
     result = company_collection.update_one(
         {'_id': company_id},
-        {'$set': {'firmographic.specialties': specialties_array}},
+        {'$set': {'specialties': specialties_array}},
         upsert=True
     )
 
@@ -235,7 +236,7 @@ def main():
     try:
         while True :
 
-            company = company_collection.find_one({'firmographic.specialties': "", 'processed': {'$ne': True}})
+            company = company_collection.find_one({'specialties': "", 'processed': {'$ne': True}})
         
             if not company :
                 print("no companies to process")

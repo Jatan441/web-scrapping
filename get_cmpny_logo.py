@@ -290,7 +290,7 @@ def search_logo_url(company_name):
             print(f"No logo found for {company_name}")
             return None
                 
-    except NoSuchElementException:
+    except Exception as e:
         print(f"Element not found for {company_name}")
         return None
 

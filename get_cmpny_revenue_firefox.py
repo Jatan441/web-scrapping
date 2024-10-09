@@ -16,7 +16,7 @@ from selenium.webdriver.common.keys import Keys
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
 db = client['warehouse']  # Replace with your database name
-company_collection = db['googlemapscompanies']  # Replace with your collection name
+company_collection = db['gmaps']  # Replace with your collection name
 
 # Firefox WebDriver setup
 firefox_options = Options()
@@ -166,10 +166,13 @@ def human_search():
 
 def get_company_revenue(company_name):
     try:
-        search_url = f"https://www.google.com/search?q={company_name}+revenue"
-        driver.get(search_url)
-        time.sleep(2)  # Wait for the page to load
-
+        driver.get('https://www.google.com/')
+        search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+        human_typing(search_bar, f"{company_name} revenue")
+        actions.move_to_element(search_bar).perform()
+        time.sleep(random.uniform(0.05, 20))
+        search_bar.send_keys(Keys.ENTER)
+        time.sleep(2)
         # Parse the page content
         soup = BeautifulSoup(driver.page_source, 'html.parser')
 

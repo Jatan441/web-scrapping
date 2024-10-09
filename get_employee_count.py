@@ -181,8 +181,12 @@ def get_company_employee_count(company_name):
     
     for prompt in search_prompts:
         try:
-            search_url = f"https://www.google.com/search?q={prompt}"
-            driver.get(search_url)
+            driver.get('https://www.google.com/')
+            search_bar = driver.find_element(By.TAG_NAME, 'textarea')
+            human_typing(search_bar, prompt)
+            actions.move_to_element(search_bar).perform()
+            time.sleep(random.uniform(0.05, 20))
+            search_bar.send_keys(Keys.ENTER)
             time.sleep(2)
 
             span_element = driver.find_element(By.CSS_SELECTOR, 'span.hgKElc')

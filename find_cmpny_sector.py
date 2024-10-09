@@ -173,6 +173,7 @@ def get_company_sector(company_name):
             time.sleep(random.uniform(0.05, 20))
             search_bar.send_keys(Keys.ENTER)
             time.sleep(2)
+            
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             span_element = soup.find('span', class_='hgKElc')
             if span_element:
