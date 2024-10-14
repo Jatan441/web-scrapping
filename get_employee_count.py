@@ -17,7 +17,7 @@ from selenium.webdriver.common.keys import Keys
 try:
     client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
     db = client['warehouse']  # Replace with your database name
-    company_collection = db['googlemapscompanies']  # Replace with your collection name
+    company_collection = db['gmaps']  # Replace with your collection name
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
 

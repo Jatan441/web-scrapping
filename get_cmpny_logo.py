@@ -17,7 +17,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # MongoDB connection setup
 client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
 db = client['warehouse']  # Replace with your database name
-company_collection = db['googlemapscompanies']  # Replace with your collection name
+company_collection = db['gmaps']  # Replace with your collection name
 
 # Firefox WebDriver setup
 firefox_options = Options()

@@ -14,6 +14,7 @@ import pyautogui
 def unpredictable_choice(arr):
     return random.choice(arr)
 # Function to mimic human-like typing
+
 def human_typing(element, text):
     for char in text:
         element.send_keys(char)
@@ -24,7 +25,7 @@ def human_mouse_movement(action, element):
     time.sleep(random.uniform(0.5, 6))
 # Function to mimic human-like mouse movements
 def human_mouse_movements(x, y, dx, dy):
-    return
+    # return
     # Move the mouse cursor to the specified coordinates
     pyautogui.moveTo(x, y)
 

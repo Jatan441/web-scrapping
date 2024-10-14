@@ -1,44 +1,54 @@
+import browser
+import time
 import random
-import pyautogui
-from pymongo import MongoClient
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+import pyautogui
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
-from bs4 import BeautifulSoup
-import time
 from webdriver_manager.firefox import GeckoDriverManager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
-import action
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 
 
-# MongoDB connection setup
-client = MongoClient('mongodb://firoz:firoz423*t@43.205.16.23:49153/')
-db = client['warehouse']
-company_collection = db['gmaps']
-
-# Firefox WebDriver setup
-firefox_options = Options()
-driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
-
-# Wait configuration
-wait = WebDriverWait(driver, 10)
-actions = ActionChains(driver)
-
+#This behavior makes the function's output unpredictable, as it can return either value with equal probability.
+def unpredictable_choice(arr):
+    return random.choice(arr)
 # Function to mimic human-like typing
 def human_typing(element, text):
     for char in text:
         element.send_keys(char)
         time.sleep(random.uniform(0.05, 0.2))
 
+def human_mouse_movement(action, element):
+    action.move_to_element(element).perform()
+    time.sleep(random.uniform(0.5, 6))
 # Function to mimic human-like mouse movements
 def human_mouse_movements(x, y, dx, dy):
+    # return
+    # Move the mouse cursor to the specified coordinates
     pyautogui.moveTo(x, y)
+
+    # Alternatively, you can move the cursor relative to its current position
     pyautogui.moveRel(dx, dy)
 
-# Predefined human-like search terms
+
+# Mimic human-like scrolling
+def human_scroll():
+    scroll_pause_time = random.uniform(1, 3)
+    last_height = browser.execute_script("return document.body.scrollHeight")
+
+    while True:
+        browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(scroll_pause_time)
+        new_height = browser.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
+
 def get_human_search_text():
     google_search_strings = [
         # General Information
@@ -138,17 +148,53 @@ def get_human_search_text():
         "self-care activities for mental health",
         "tips for effective time management"
     ]
+    return unpredictable_choice(google_search_strings)
 
-    return google_search_strings
 
+
+
+# def human_search():
+#     try:
+#         time.sleep(5)
+#         firefox_options = Options()
+#         browser = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
+#         # browser = webdriver.Chrome()
+#         browser.maximize_window()
+#         browser.get('https://www.google.com/')
+#         #Type the query to the google search
+#         search_bar = browser.find_element(By.TAG_NAME,'textarea')
+#         human_typing(search_bar, get_human_search_text())
+#         human_mouse_movement(ActionChains(browser),search_bar)
+#         time.sleep(random.uniform(0.05, 20))
+#         search_bar.send_keys(Keys.ENTER)
+#         time.sleep(5)
+#         human_mouse_movements(10, 20, 40, 12)
+#         human_mouse_movements(10, 20, 40, 120)
+#         human_mouse_movements(20, 10, 20, 12)
+#         human_mouse_movements(10, 20, 40, 12)
+#         human_mouse_movements(30, 20, 40, 12)
+#         human_mouse_movements(10, 40, 10, 102)
+#         human_mouse_movements(100, 300, 40, 12)
+#         human_mouse_movements(40, 20, 20, 120)
+#         # Find the first search result link and click it
+#         first_result = browser.find_element(By.CSS_SELECTOR, 'h3')
+#         first_result.click()
+#     except Exception as e:
+#         print("Google search failed."+str(e))
+#     browser.close()
+    
+
+# Perform a human-like search on Google
 def human_search():
-    """
-    Perform a human-like search on Google by typing in the search bar and interacting with results.
-    """
     try:
+        firefox_options = Options()
+        driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=firefox_options)
         driver.get('https://www.google.com/')
         search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-        human_typing(search_bar, action.unpredictable_choice(get_human_search_text()))
+        search_text = unpredictable_choice(get_human_search_text())
+        human_typing(search_bar, search_text)
+        # move_to_element(search_bar).perform()
+        time.sleep(random.uniform(0.05, 20))
         search_bar.send_keys(Keys.ENTER)
         time.sleep(5)
         human_mouse_movements(10, 20, 40, 12)
@@ -156,84 +202,3 @@ def human_search():
         first_result.click()
     except Exception as e:
         print(f"Google search failed:")
-
-
-def get_company_industry(company_name):
-    try :
-        driver.get('https://www.google.com/')
-        search_bar = driver.find_element(By.TAG_NAME, 'textarea')
-        human_typing(search_bar, f"{company_name} primary industry")
-        actions.move_to_element(search_bar).perform()
-        time.sleep(random.uniform(0.05, 20))
-        search_bar.send_keys(Keys.ENTER)
-        time.sleep(2)
-        
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-        span_element = soup.find('span', class_='hgKElc')
-        if span_element:
-            b_tag = span_element.find('b')
-            if b_tag:
-                return b_tag.text
-                
-    except Exception as e:
-        print(f"Couldn't find sector for {company_name}")
-
-
-
-
-def update_industry_in_db(company_id, industry):
-    """
-    Update MongoDB with the company's industry.
-    If industry is not found, update with an empty string.
-    """
-    # If industry is not found, set it as an empty string
-    if not industry:
-        industry = ""  # Update with an empty string if no industry is found
-
-    # Update the collection with the found or empty industry value
-    result = company_collection.update_one(
-        {'_id': company_id},
-        {'$set': {'firmographic.industry': industry}},
-        upsert=True
-    )
-
-    # Check if the document was successfully updated
-    if result.matched_count > 0:
-        if industry:
-            print(f"Updated company with ID {company_id} with industry: {industry}")
-        else:
-            print(f"Updated company with ID {company_id} but no industry found (set as empty string).")
-    else:
-        print(f"Failed to update company with ID {company_id}.")
-
-
-def main():
-    """
-    Main function to fetch companies from MongoDB, get industry info from Google, and update MongoDB.
-    """
-    try:
-        while True:
-
-            company = company_collection.find_one({'firmographic.industry': {'$exists': False}})
-
-            if not company :
-                print("no companies to process")
-                break
-        
-            try:
-                company_name = company['name']
-                company_id = company['_id']
-                print(f"Fetching industry for {company_name}...")
-                industry = get_company_industry(company_name)
-                if action.unpredictable_choice([True, False]):
-                    human_search()
-                update_industry_in_db(company_id, industry)
-            except Exception as e:
-                print(f"Skipping company {company_name} due to error:")
-    except Exception as e:
-        print(f"Error fetching companies:")
-
-if __name__ == "__main__":
-    main()
-    driver.quit()
