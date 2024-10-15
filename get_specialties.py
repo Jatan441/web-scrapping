@@ -236,7 +236,10 @@ def main():
     try:
         while True :
 
-            company = company_collection.find_one({'specialties': "", 'processed': {'$ne': True}})
+            company = company_collection.find_one({
+                '$or': [{'specialties': {'$exists': False}}, {'specialties': ""}],
+                'processed': {'$ne': True}  # Only find unprocessed companies
+            })
         
             if not company :
                 print("no companies to process")
